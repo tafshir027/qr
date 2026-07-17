@@ -7,30 +7,39 @@
   <!-- Font Awesome 6 -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <!-- jsQR library for scanning -->
-  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js">
-  </script>
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
   <!-- QRCode.js for generating -->
-  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js">
-  </script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
   <style>
     * {
       margin: 0;
       padding: 0;
       box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      overflow-x: hidden;
+      width: 100%;
     }
 
     body {
       font-family: 'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       background: #06060c;
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       justify-content: center;
       min-height: 100vh;
       padding: 16px;
-      background-image: 
+      padding-top: max(16px, env(safe-area-inset-top));
+      padding-bottom: max(16px, env(safe-area-inset-bottom));
+      padding-left: max(16px, env(safe-area-inset-left));
+      padding-right: max(16px, env(safe-area-inset-right));
+      background-image:
         radial-gradient(ellipse at 20% 20%, #1a1030 0%, transparent 50%),
         radial-gradient(ellipse at 80% 80%, #0f1a2e 0%, transparent 50%),
         radial-gradient(ellipse at 50% 50%, #0a0a14 0%, #030308 100%);
+      background-attachment: fixed;
     }
 
     .app-container {
@@ -45,6 +54,11 @@
     @keyframes fadeSlideIn {
       from { opacity: 0; transform: translateY(40px); }
       to { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .app-container { animation: none; }
+      .live-dot, .scan-laser { animation: none !important; }
     }
 
     /* Glass panel */
@@ -62,32 +76,37 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 18px 22px 10px;
+      gap: 12px;
+      padding: 18px 22px 14px;
+      flex-wrap: wrap;
     }
 
     .brand {
       display: flex;
       align-items: center;
       gap: 12px;
+      min-width: 0;
     }
 
     .brand i {
-      font-size: 2rem;
+      font-size: 1.6rem;
       color: #b794ff;
       filter: drop-shadow(0 0 14px #8b5cf6);
       background: linear-gradient(135deg, #3b2d60, #1e1638);
       padding: 10px;
       border-radius: 16px;
+      flex-shrink: 0;
     }
 
     .brand h2 {
       font-weight: 650;
-      font-size: 1.6rem;
+      font-size: 1.4rem;
       letter-spacing: -0.4px;
       background: linear-gradient(135deg, #ede4ff, #b794ff);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
+      white-space: nowrap;
     }
 
     .mode-tabs {
@@ -96,18 +115,28 @@
       background: rgba(255,255,255,0.04);
       border-radius: 30px;
       padding: 4px;
+      flex-shrink: 0;
     }
 
     .mode-tab {
-      padding: 8px 16px;
+      padding: 8px 14px;
       border-radius: 26px;
-      font-size: 0.8rem;
+      font-size: 0.78rem;
       font-weight: 600;
       cursor: pointer;
       color: #a89bc7;
       transition: 0.2s;
       border: none;
       background: transparent;
+      white-space: nowrap;
+    }
+
+    .mode-tab:focus-visible,
+    .btn:focus-visible,
+    .icon-btn:focus-visible,
+    .gen-input:focus-visible {
+      outline: 2px solid #b794ff;
+      outline-offset: 2px;
     }
 
     .mode-tab.active {
@@ -121,12 +150,14 @@
       align-items: center;
       gap: 8px;
       background: rgba(255, 255, 255, 0.04);
-      padding: 8px 18px;
+      padding: 8px 16px;
       border-radius: 40px;
       border: 1px solid rgba(255, 255, 255, 0.12);
-      font-size: 0.8rem;
+      font-size: 0.78rem;
       font-weight: 500;
       color: #cfc0ff;
+      width: 100%;
+      justify-content: center;
     }
 
     .live-dot {
@@ -136,6 +167,7 @@
       background: #4ade80;
       box-shadow: 0 0 12px #4ade80;
       animation: pulse 2s infinite;
+      flex-shrink: 0;
     }
     .live-dot.off {
       background: #f87171;
@@ -147,7 +179,7 @@
       50% { opacity: 1; transform: scale(1.25); }
     }
 
-    /* Scanner View */
+    /* Scanner / Generator views */
     #scanner-view, #generator-view {
       display: none;
     }
@@ -164,7 +196,7 @@
       width: 100%;
       aspect-ratio: 1 / 1;
       background: #020108;
-      border-radius: 38px;
+      border-radius: 32px;
       overflow: hidden;
       box-shadow: 0 0 0 3px rgba(138, 110, 255, 0.5), 0 25px 45px #000000aa;
       transition: all 0.3s;
@@ -191,7 +223,7 @@
     .frame-corners i {
       position: absolute;
       color: #c4b5fd;
-      font-size: 32px;
+      font-size: 28px;
       filter: drop-shadow(0 0 15px #a78bfa);
       opacity: 0.9;
       z-index: 2;
@@ -211,6 +243,7 @@
       animation: laserSweep 2.8s ease-in-out infinite;
       border-radius: 4px;
       z-index: 2;
+      display: none;
     }
 
     @keyframes laserSweep {
@@ -219,32 +252,59 @@
       100% { top: 10%; opacity: 0.6; }
     }
 
-    /* Generator preview */
+    /* Generator preview — fixed to behave like the scanner viewfinder */
     .generator-preview {
       width: 100%;
       aspect-ratio: 1 / 1;
       background: #fff;
-      border-radius: 38px;
+      border-radius: 32px;
       display: flex;
       align-items: center;
       justify-content: center;
       overflow: hidden;
       box-shadow: 0 0 0 3px rgba(138, 110, 255, 0.5);
+      padding: 24px;
     }
 
     #generated-qr {
-      max-width: 80%;
-      max-height: 80%;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #generated-qr img,
+    #generated-qr canvas {
+      max-width: 100%;
+      max-height: 100%;
+      width: auto;
+      height: auto;
+    }
+
+    .generator-placeholder {
+      color: #9b8ec0;
+      font-size: 0.85rem;
+      text-align: center;
+      padding: 0 20px;
+    }
+    .generator-placeholder i {
+      font-size: 2.4rem;
+      display: block;
+      margin-bottom: 10px;
+      color: #c9b3ff;
+      opacity: 0.6;
     }
 
     .gen-input-group {
       display: flex;
       gap: 10px;
-      margin: 12px;
+      margin: 12px 8px 0;
     }
 
     .gen-input {
       flex: 1;
+      min-width: 0;
       background: rgba(20, 15, 35, 0.9);
       border: 1px solid rgba(255,255,255,0.2);
       border-radius: 30px;
@@ -288,34 +348,34 @@
     /* Buttons */
     .btn-group {
       display: flex;
-      gap: 14px;
+      gap: 10px;
       padding: 8px 12px 4px;
       flex-wrap: wrap;
     }
 
     .btn {
-      flex: 1;
-      min-width: 80px;
-      background: rgba(25, 20, 40, 0.8);
+      flex: 1 1 0;
+      min-width: 70px;
+      background: linear-gradient(135deg, rgba(35, 28, 55, 0.9), rgba(20, 15, 35, 0.9));
       backdrop-filter: blur(16px);
       border: 1px solid rgba(255, 255, 255, 0.18);
       color: #f0e6ff;
-      padding: 15px 12px;
+      padding: 15px 10px;
       border-radius: 60px;
       font-weight: 600;
-      font-size: 0.9rem;
+      font-size: 0.85rem;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 8px;
+      gap: 6px;
       cursor: pointer;
       transition: 0.2s;
-      background: linear-gradient(135deg, rgba(35, 28, 55, 0.9), rgba(20, 15, 35, 0.9));
       box-shadow: 0 10px 22px rgba(0,0,0,0.5);
+      white-space: nowrap;
     }
 
     .btn i {
-      font-size: 1rem;
+      font-size: 0.95rem;
     }
 
     .btn.primary {
@@ -329,6 +389,12 @@
       background: #3f3165;
     }
 
+    .btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      transform: none !important;
+    }
+
     /* Result panel */
     .result-panel {
       padding: 18px 20px 14px;
@@ -340,14 +406,18 @@
       justify-content: space-between;
       align-items: center;
       margin-bottom: 8px;
+      gap: 8px;
     }
 
-    .label-row span {
+    .label-row span:first-child {
       font-size: 0.7rem;
       text-transform: uppercase;
       letter-spacing: 1.5px;
       color: #a99bc7;
       font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .history-badge {
@@ -357,6 +427,8 @@
       font-size: 0.7rem;
       color: #d4c4ff;
       cursor: pointer;
+      border: none;
+      flex-shrink: 0;
     }
 
     .result-box {
@@ -372,36 +444,38 @@
       line-height: 1.4;
       word-break: break-word;
       backdrop-filter: blur(10px);
+      font-size: 0.9rem;
     }
 
     .action-icons {
       display: flex;
-      gap: 10px;
+      gap: 8px;
       margin-top: 14px;
       flex-wrap: wrap;
     }
 
     .icon-btn {
-      flex: 1;
-      min-width: 60px;
+      flex: 1 1 auto;
+      min-width: 56px;
       background: rgba(255,255,255,0.03);
       border: 1px solid rgba(255,255,255,0.18);
       border-radius: 40px;
-      padding: 12px 10px;
+      padding: 12px 8px;
       color: #cfc1ff;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 8px;
+      gap: 6px;
       font-weight: 500;
-      font-size: 0.8rem;
+      font-size: 0.78rem;
       cursor: pointer;
       transition: 0.2s;
       backdrop-filter: blur(10px);
+      white-space: nowrap;
     }
 
     .icon-btn i {
-      font-size: 0.9rem;
+      font-size: 0.85rem;
     }
 
     .icon-btn:active {
@@ -409,11 +483,17 @@
       border-color: #c9b3ff;
     }
 
+    .icon-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
     .footer-msg {
       text-align: center;
       font-size: 0.75rem;
       color: #7b6b9e;
       margin-top: 12px;
+      min-height: 1.2em;
     }
 
     /* History dropdown */
@@ -422,7 +502,7 @@
       border-radius: 20px;
       margin: 8px 0 0;
       padding: 10px;
-      max-height: 120px;
+      max-height: 140px;
       overflow-y: auto;
       display: none;
       border: 1px solid #3d3060;
@@ -438,9 +518,78 @@
       cursor: pointer;
       display: flex;
       justify-content: space-between;
+      gap: 10px;
+    }
+    .history-item span:first-child {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      min-width: 0;
     }
     .history-item:hover {
       background: #2a1f45;
+    }
+    .history-empty {
+      padding: 10px;
+      color: #7b6b9e;
+      font-size: 0.8rem;
+    }
+
+    /* ───────── Mobile responsive fixes ───────── */
+    @media (max-width: 480px) {
+      body { padding: 10px; }
+
+      .app-container { gap: 12px; }
+
+      .header-row {
+        padding: 16px 16px 12px;
+        justify-content: center;
+      }
+
+      .brand { width: 100%; justify-content: center; }
+      .brand h2 { font-size: 1.25rem; }
+      .brand i { font-size: 1.4rem; padding: 8px; }
+
+      .mode-tabs { width: 100%; justify-content: center; }
+      .mode-tab { flex: 1; text-align: center; padding: 9px 8px; font-size: 0.75rem; }
+
+      .status-pill { font-size: 0.72rem; padding: 7px 12px; }
+
+      .viewfinder-outer, .result-panel { margin: 0 2px; }
+
+      .viewfinder, .generator-preview { border-radius: 26px; }
+
+      .generator-preview { padding: 16px; }
+
+      .gen-input-group {
+        flex-direction: column;
+        margin: 12px 2px 0;
+      }
+
+      .gen-input { width: 100%; }
+
+      #gen-btn {
+        flex: 1 1 auto !important;
+        width: 100%;
+      }
+
+      .btn-group { padding: 8px 2px 4px; gap: 8px; }
+      .btn { font-size: 0.78rem; padding: 13px 8px; min-width: 0; }
+      .btn span.btn-label { display: inline; }
+
+      .action-icons { gap: 6px; }
+      .icon-btn { font-size: 0.68rem; padding: 10px 4px; min-width: 0; }
+      .icon-btn i { font-size: 0.8rem; }
+
+      .feature-chips { padding: 0 4px; gap: 8px; }
+      .chip { font-size: 0.7rem; padding: 6px 10px; }
+    }
+
+    @media (max-width: 360px) {
+      .brand h2 { font-size: 1.1rem; }
+      .mode-tab { font-size: 0.7rem; padding: 8px 6px; }
+      .icon-btn span { display: none; }
+      .icon-btn { padding: 12px 6px; }
     }
   </style>
 </head>
@@ -448,7 +597,7 @@
   <div class="app-container">
     <!-- Header -->
     <div class="glass">
-      <div class="header-row" style="flex-wrap:wrap; gap:10px;">
+      <div class="header-row">
         <div class="brand">
           <i class="fa-solid fa-qrcode"></i>
           <h2>QR Pro</h2>
@@ -488,9 +637,9 @@
       </div>
 
       <div class="btn-group">
-        <button class="btn primary" id="start-btn"><i class="fa-solid fa-play"></i> Scan</button>
-        <button class="btn" id="switch-btn"><i class="fa-solid fa-arrows-rotate"></i> Flip</button>
-        <button class="btn" id="upload-btn"><i class="fa-solid fa-upload"></i> Image</button>
+        <button class="btn primary" id="start-btn"><i class="fa-solid fa-play"></i> <span class="btn-label">Scan</span></button>
+        <button class="btn" id="switch-btn"><i class="fa-solid fa-arrows-rotate"></i> <span class="btn-label">Flip</span></button>
+        <button class="btn" id="upload-btn"><i class="fa-solid fa-upload"></i> <span class="btn-label">Image</span></button>
       </div>
       <input type="file" id="file-input" accept="image/*" style="display:none;">
     </div>
@@ -499,16 +648,21 @@
     <div id="generator-view">
       <div class="viewfinder-outer">
         <div class="generator-preview" id="generator-preview">
-          <div id="generated-qr"></div>
+          <div id="generated-qr">
+            <div class="generator-placeholder" id="generator-placeholder">
+              <i class="fa-solid fa-qrcode"></i>
+              টেক্সট বা URL লিখে QR কোড তৈরি করুন
+            </div>
+          </div>
         </div>
       </div>
       <div class="gen-input-group">
-        <input type="text" class="gen-input" id="gen-text" placeholder="Enter text or URL to generate QR...">
-        <button class="btn primary" id="gen-btn" style="flex:0 0 auto; padding:14px 24px;"><i class="fa-solid fa-wand-magic-sparkles"></i> Generate</button>
+        <input type="text" class="gen-input" id="gen-text" placeholder="Enter text or URL to generate QR..." maxlength="1000">
+        <button class="btn primary" id="gen-btn" style="flex:0 0 auto; padding:14px 24px;"><i class="fa-solid fa-wand-magic-sparkles"></i> <span class="btn-label">Generate</span></button>
       </div>
       <div class="btn-group">
-        <button class="btn" id="download-qr"><i class="fa-solid fa-download"></i> Download</button>
-        <button class="btn" id="print-qr"><i class="fa-solid fa-print"></i> Print</button>
+        <button class="btn" id="download-qr" disabled><i class="fa-solid fa-download"></i> <span class="btn-label">Download</span></button>
+        <button class="btn" id="print-qr" disabled><i class="fa-solid fa-print"></i> <span class="btn-label">Print</span></button>
       </div>
     </div>
 
@@ -516,27 +670,29 @@
     <div class="glass result-panel">
       <div class="label-row">
         <span><i class="fa-solid fa-barcode"></i> Scanned Data</span>
-        <span class="history-badge" id="history-count">0 scans</span>
+        <button class="history-badge" id="history-count" aria-label="Toggle scan history">0 scans</button>
       </div>
       <div class="result-box" id="result-text">Waiting for QR code...</div>
       <div class="action-icons">
-        <button class="icon-btn" id="copy-btn"><i class="fa-solid fa-copy"></i> Copy</button>
-        <button class="icon-btn" id="open-btn"><i class="fa-solid fa-arrow-up-right-from-square"></i> Open</button>
-        <button class="icon-btn" id="share-btn"><i class="fa-solid fa-share-nodes"></i> Share</button>
-        <button class="icon-btn" id="history-toggle"><i class="fa-solid fa-list"></i> Log</button>
-        <button class="icon-btn" id="clear-btn"><i class="fa-solid fa-trash"></i> Clear</button>
+        <button class="icon-btn" id="copy-btn" disabled><i class="fa-solid fa-copy"></i> <span>Copy</span></button>
+        <button class="icon-btn" id="open-btn" disabled><i class="fa-solid fa-arrow-up-right-from-square"></i> <span>Open</span></button>
+        <button class="icon-btn" id="share-btn" disabled><i class="fa-solid fa-share-nodes"></i> <span>Share</span></button>
+        <button class="icon-btn" id="history-toggle"><i class="fa-solid fa-list"></i> <span>Log</span></button>
+        <button class="icon-btn" id="clear-btn" disabled><i class="fa-solid fa-trash"></i> <span>Clear</span></button>
       </div>
-      <div class="footer-msg" id="live-msg">Align QR within frame or upload image</div>
+      <div class="footer-msg" id="live-msg" role="status" aria-live="polite">Align QR within frame or upload image</div>
       <div class="history-dropdown" id="history-dropdown"></div>
     </div>
   </div>
 
   <script>
     (function() {
+      'use strict';
+
       // ────────── DOM Elements ──────────
       const video = document.getElementById('qr-video');
       const canvas = document.getElementById('qr-canvas');
-      const ctx = canvas.getContext('2d');
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
       const startBtn = document.getElementById('start-btn');
       const switchBtn = document.getElementById('switch-btn');
       const uploadBtn = document.getElementById('upload-btn');
@@ -548,13 +704,13 @@
       const historyToggle = document.getElementById('history-toggle');
       const clearBtn = document.getElementById('clear-btn');
       const historyDropdown = document.getElementById('history-dropdown');
-      const historyCountSpan = document.getElementById('history-count');
+      const historyCountBtn = document.getElementById('history-count');
       const liveMsg = document.getElementById('live-msg');
       const statusText = document.getElementById('status-text');
       const liveDot = document.getElementById('live-dot');
       const viewfinder = document.getElementById('viewfinder');
       const scanLaser = document.getElementById('scan-laser');
-      
+
       // Generator elements
       const tabScanner = document.getElementById('tab-scanner');
       const tabGenerator = document.getElementById('tab-generator');
@@ -563,6 +719,7 @@
       const genText = document.getElementById('gen-text');
       const genBtn = document.getElementById('gen-btn');
       const generatedQR = document.getElementById('generated-qr');
+      const generatorPlaceholder = document.getElementById('generator-placeholder');
       const downloadBtn = document.getElementById('download-qr');
       const printBtn = document.getElementById('print-qr');
 
@@ -572,10 +729,30 @@
       let animFrame = null;
       let facingMode = 'environment';
       let lastResult = '';
+      let hasResult = false;          // FIX: explicit flag instead of matching text content
       let throttle = false;
       let scanHistory = [];
       let isImageMode = false;
       let currentQRDataURL = '';
+
+      // ────────── Feature detection ──────────
+      const hasMediaDevices = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+      const hasClipboardAPI = !!(navigator.clipboard && navigator.clipboard.writeText);
+      const hasJsQR = typeof jsQR !== 'undefined';
+      const hasQRCodeLib = typeof QRCode !== 'undefined';
+
+      if (!hasMediaDevices) {
+        startBtn.disabled = true;
+        switchBtn.disabled = true;
+      }
+      if (!hasJsQR) {
+        startBtn.disabled = true;
+        switchBtn.disabled = true;
+        uploadBtn.disabled = true;
+      }
+      if (!hasQRCodeLib) {
+        genBtn.disabled = true;
+      }
 
       // ────────── Tab Switching ──────────
       tabScanner.addEventListener('click', () => {
@@ -592,8 +769,9 @@
         scannerView.classList.remove('active');
         generatorView.classList.add('active');
         stopCamera();
+        startBtn.innerHTML = '<i class="fa-solid fa-play"></i> <span class="btn-label">Scan</span>';
         updateUI('Generator mode', false);
-        liveMsg.textContent = 'Enter text to generate QR code';
+        liveMsg.textContent = hasQRCodeLib ? 'Enter text to generate QR code' : 'QR generator library failed to load — check your connection';
       });
 
       // ────────── Helper Functions ──────────
@@ -627,6 +805,13 @@
         isImageMode = false;
       }
 
+      function setResultButtonsEnabled(enabled) {
+        copyBtn.disabled = !enabled;
+        openBtn.disabled = !enabled;
+        shareBtn.disabled = !enabled;
+        clearBtn.disabled = !enabled;
+      }
+
       function addToHistory(data) {
         if (!data || data === lastResult) return;
         const entry = { text: data, time: new Date().toLocaleTimeString() };
@@ -636,23 +821,42 @@
       }
 
       function updateHistoryUI() {
-        historyCountSpan.textContent = `${scanHistory.length} scan${scanHistory.length !== 1 ? 's' : ''}`;
+        historyCountBtn.textContent = `${scanHistory.length} scan${scanHistory.length !== 1 ? 's' : ''}`;
         renderHistoryDropdown();
       }
 
+      // FIX: build history rows with textContent/DOM nodes instead of innerHTML
+      // to prevent stored XSS from a malicious QR payload.
       function renderHistoryDropdown() {
         historyDropdown.innerHTML = '';
         if (scanHistory.length === 0) {
-          historyDropdown.innerHTML = '<div style="padding:10px;color:#7b6b9e;">No history yet</div>';
+          const empty = document.createElement('div');
+          empty.className = 'history-empty';
+          empty.textContent = 'No history yet';
+          historyDropdown.appendChild(empty);
           return;
         }
         scanHistory.slice(0, 8).forEach((item) => {
           const div = document.createElement('div');
           div.className = 'history-item';
-          div.innerHTML = `<span>${item.text.substring(0, 40)}</span><span style="color:#9b8ec0;font-size:0.7rem;">${item.time}</span>`;
+
+          const textSpan = document.createElement('span');
+          textSpan.textContent = item.text.length > 40 ? item.text.substring(0, 40) + '…' : item.text;
+
+          const timeSpan = document.createElement('span');
+          timeSpan.style.color = '#9b8ec0';
+          timeSpan.style.fontSize = '0.7rem';
+          timeSpan.style.flexShrink = '0';
+          timeSpan.textContent = item.time;
+
+          div.appendChild(textSpan);
+          div.appendChild(timeSpan);
+
           div.addEventListener('click', () => {
             resultText.textContent = item.text;
             lastResult = item.text;
+            hasResult = true;
+            setResultButtonsEnabled(true);
             liveMsg.textContent = 'Loaded from history';
           });
           historyDropdown.appendChild(div);
@@ -660,7 +864,7 @@
       }
 
       function decodeQRFromImageData(imageData) {
-        if (typeof jsQR === 'undefined') return null;
+        if (!hasJsQR) return null;
         const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: "dontInvert" });
         return code ? code.data : null;
       }
@@ -668,7 +872,9 @@
       function processScannedData(data) {
         if (!data || (throttle && data === lastResult)) return;
         lastResult = data;
+        hasResult = true;
         resultText.textContent = data;
+        setResultButtonsEnabled(true);
         addToHistory(data);
         liveMsg.textContent = '✅ QR Code detected!';
         throttle = true;
@@ -689,8 +895,22 @@
         if (scanning) animFrame = requestAnimationFrame(scanLoop);
       }
 
+      // FIX: startCamera now returns true/false so callers know whether it actually
+      // started, instead of the UI blindly assuming success.
       async function startCamera(mode) {
         stopCamera();
+
+        if (!hasMediaDevices) {
+          updateUI('Camera unavailable', false);
+          liveMsg.textContent = 'Camera API not supported here (needs HTTPS / a supported browser)';
+          return false;
+        }
+        if (!hasJsQR) {
+          updateUI('Scanner unavailable', false);
+          liveMsg.textContent = 'Scanner library failed to load — check your connection';
+          return false;
+        }
+
         try {
           const constraints = {
             video: { facingMode: { ideal: mode }, width: { ideal: 640 }, height: { ideal: 640 } },
@@ -700,7 +920,10 @@
           video.srcObject = stream;
           video.style.display = 'block';
           canvas.style.display = 'none';
-          await new Promise(r => video.onloadedmetadata = r);
+          await new Promise((resolve, reject) => {
+            video.onloadedmetadata = resolve;
+            setTimeout(() => reject(new Error('Camera timed out')), 8000);
+          });
           await video.play();
           scanning = true;
           facingMode = mode;
@@ -709,9 +932,14 @@
           liveMsg.textContent = 'Scanning...';
           scanLaser.style.display = 'block';
           scanLoop();
+          return true;
         } catch (err) {
+          stopCamera();
           updateUI('Camera denied', false);
-          liveMsg.textContent = 'Allow camera permission';
+          liveMsg.textContent = err && err.name === 'NotAllowedError'
+            ? 'Camera permission denied — allow access to scan'
+            : 'Could not access camera on this device';
+          return false;
         }
       }
 
@@ -719,20 +947,29 @@
         if (scanning) {
           stopCamera();
           updateUI('Standby', false);
-          startBtn.innerHTML = '<i class="fa-solid fa-play"></i> Scan';
+          startBtn.innerHTML = '<i class="fa-solid fa-play"></i> <span class="btn-label">Scan</span>';
           liveMsg.textContent = 'Scanner paused';
+          return;
+        }
+
+        startBtn.disabled = true;
+        const started = await startCamera(facingMode);
+        startBtn.disabled = !(hasMediaDevices && hasJsQR);
+        // FIX: only flip the button to "Stop" state if the camera actually started.
+        if (started) {
+          startBtn.innerHTML = '<i class="fa-solid fa-stop"></i> <span class="btn-label">Stop</span>';
         } else {
-          await startCamera(facingMode);
-          startBtn.innerHTML = '<i class="fa-solid fa-stop"></i> Stop';
+          startBtn.innerHTML = '<i class="fa-solid fa-play"></i> <span class="btn-label">Scan</span>';
         }
       }
 
       async function switchCamera() {
         const newMode = facingMode === 'environment' ? 'user' : 'environment';
         if (scanning) {
-          stopCamera();
-          await startCamera(newMode);
-          startBtn.innerHTML = '<i class="fa-solid fa-stop"></i> Stop';
+          const started = await startCamera(newMode);
+          startBtn.innerHTML = started
+            ? '<i class="fa-solid fa-stop"></i> <span class="btn-label">Stop</span>'
+            : '<i class="fa-solid fa-play"></i> <span class="btn-label">Scan</span>';
         } else {
           facingMode = newMode;
           updateUI(newMode === 'environment' ? 'Back (ready)' : 'Front (ready)', false);
@@ -742,14 +979,24 @@
       // ────────── Image Upload ──────────
       function handleImageUpload(file) {
         if (!file) return;
+        if (!hasJsQR) {
+          liveMsg.textContent = 'Scanner library failed to load — check your connection';
+          return;
+        }
         stopCamera();
         isImageMode = true;
         scanLaser.style.display = 'none';
         updateUI('Image mode', false);
         liveMsg.textContent = 'Decoding image...';
         const reader = new FileReader();
+        reader.onerror = function() {
+          liveMsg.textContent = 'Could not read that file';
+        };
         reader.onload = function(e) {
           const img = new Image();
+          img.onerror = function() {
+            liveMsg.textContent = 'That file is not a readable image';
+          };
           img.onload = function() {
             canvas.width = img.width;
             canvas.height = img.height;
@@ -764,6 +1011,8 @@
             } else {
               liveMsg.textContent = 'No QR found in image';
               resultText.textContent = 'No QR code detected in image';
+              hasResult = false;
+              setResultButtonsEnabled(false);
             }
           };
           img.src = e.target.result;
@@ -772,30 +1021,62 @@
       }
 
       // ────────── QR Generator ──────────
+      // FIX: instead of guessing with a fixed setTimeout (race condition), read the
+      // canvas qrcodejs draws internally the moment it's created — no arbitrary delay,
+      // and it works even if the library's fallback <img> hasn't finished rendering.
       function generateQR() {
+        if (!hasQRCodeLib) {
+          liveMsg.textContent = 'QR generator library failed to load — check your connection';
+          return;
+        }
         const text = genText.value.trim();
         if (!text) {
           liveMsg.textContent = 'Please enter text or URL';
+          genText.focus();
           return;
         }
+
         generatedQR.innerHTML = '';
-        const qrCode = new QRCode(generatedQR, {
-          text: text,
-          width: 256,
-          height: 256,
-          colorDark: "#000000",
-          colorLight: "#ffffff",
-          correctLevel: QRCode.CorrectLevel.H
-        });
-        
-        // Get data URL after a short delay
-        setTimeout(() => {
-          const img = generatedQR.querySelector('img');
-          if (img) {
-            currentQRDataURL = img.src;
-            liveMsg.textContent = 'QR code generated successfully!';
+        currentQRDataURL = '';
+        downloadBtn.disabled = true;
+        printBtn.disabled = true;
+        liveMsg.textContent = 'Generating...';
+
+        try {
+          new QRCode(generatedQR, {
+            text: text,
+            width: 256,
+            height: 256,
+            colorDark: "#000000",
+            colorLight: "#ffffff",
+            correctLevel: QRCode.CorrectLevel.H
+          });
+        } catch (err) {
+          liveMsg.textContent = 'Failed to generate QR code';
+          return;
+        }
+
+        requestAnimationFrame(() => {
+          const canvasEl = generatedQR.querySelector('canvas');
+          const imgEl = generatedQR.querySelector('img');
+          if (canvasEl) {
+            try {
+              currentQRDataURL = canvasEl.toDataURL('image/png');
+            } catch (e) {
+              currentQRDataURL = imgEl ? imgEl.src : '';
+            }
+          } else if (imgEl && imgEl.src) {
+            currentQRDataURL = imgEl.src;
           }
-        }, 300);
+
+          if (currentQRDataURL) {
+            downloadBtn.disabled = false;
+            printBtn.disabled = false;
+            liveMsg.textContent = 'QR code generated successfully!';
+          } else {
+            liveMsg.textContent = 'QR generation failed — try again';
+          }
+        });
       }
 
       function downloadQR() {
@@ -806,50 +1087,100 @@
         const link = document.createElement('a');
         link.download = 'qrcode.png';
         link.href = currentQRDataURL;
+        document.body.appendChild(link);
         link.click();
+        link.remove();
         liveMsg.textContent = 'QR code downloaded!';
       }
 
+      // FIX: no more closing the print window immediately after calling print()
+      // (which raced against the print dialog actually opening). We wait for the
+      // image to load, then trigger print, and close only after the print flow ends.
       function printQR() {
         if (!currentQRDataURL) {
           liveMsg.textContent = 'Generate a QR code first';
           return;
         }
-        const win = window.open('');
-        win.document.write(`<img src="${currentQRDataURL}" style="display:block;margin:auto;max-width:100%;">`);
+        const win = window.open('', '_blank');
+        if (!win) {
+          liveMsg.textContent = 'Please allow pop-ups to print';
+          return;
+        }
         win.document.title = 'Print QR Code';
-        win.print();
-        win.close();
+        win.document.body.style.margin = '0';
+        win.document.body.style.display = 'flex';
+        win.document.body.style.alignItems = 'center';
+        win.document.body.style.justifyContent = 'center';
+        win.document.body.style.minHeight = '100vh';
+
+        const img = win.document.createElement('img');
+        img.src = currentQRDataURL;
+        img.style.maxWidth = '90%';
+        img.style.display = 'block';
+        img.onload = () => {
+          win.focus();
+          win.print();
+        };
+        win.addEventListener('afterprint', () => win.close());
+        win.document.body.appendChild(img);
       }
 
       // ────────── Action Buttons ──────────
       function copyText() {
+        if (!hasResult) return;
         const t = resultText.textContent;
-        if (!t || t.includes('Waiting')) return;
-        navigator.clipboard.writeText(t).then(() => {
+        if (hasClipboardAPI) {
+          navigator.clipboard.writeText(t).then(() => {
+            liveMsg.textContent = '📋 Copied!';
+          }).catch(() => fallbackCopy(t));
+        } else {
+          fallbackCopy(t);
+        }
+      }
+
+      function fallbackCopy(t) {
+        try {
+          const ta = document.createElement('textarea');
+          ta.value = t;
+          ta.style.position = 'fixed';
+          ta.style.opacity = '0';
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand('copy');
+          ta.remove();
           liveMsg.textContent = '📋 Copied!';
-        }).catch(() => liveMsg.textContent = 'Copy failed');
+        } catch (e) {
+          liveMsg.textContent = 'Copy not supported on this device';
+        }
       }
 
       function openLink() {
+        if (!hasResult) return;
         let t = resultText.textContent.trim();
-        if (!t || t.includes('Waiting')) return;
         if (!/^https?:\/\//i.test(t)) {
-          if (/^[\w\-]+\.[a-z]{2,}/i.test(t)) t = 'https://' + t;
+          if (/^[\w-]+(\.[\w-]+)+/i.test(t)) t = 'https://' + t;
           else { liveMsg.textContent = 'Not a valid URL'; return; }
         }
-        window.open(t, '_blank', 'noopener,noreferrer');
+        // FIX: lightweight confirmation before following a link decoded from an
+        // untrusted QR code, so users see the real destination first.
+        const proceed = window.confirm('Open this link?\n\n' + t);
+        if (proceed) {
+          window.open(t, '_blank', 'noopener,noreferrer');
+        }
       }
 
       function shareResult() {
+        if (!hasResult) return;
         const t = resultText.textContent;
-        if (!t || t.includes('Waiting')) return;
         if (navigator.share) {
           navigator.share({ text: t }).catch(() => {});
-        } else {
+        } else if (hasClipboardAPI) {
           navigator.clipboard.writeText(t).then(() => {
             liveMsg.textContent = 'Link copied (share not supported)';
           });
+        } else {
+          fallbackCopy(t);
+          liveMsg.textContent = 'Link copied (share not supported)';
         }
       }
 
@@ -860,6 +1191,8 @@
       function clearResult() {
         resultText.textContent = 'Waiting for QR code...';
         lastResult = '';
+        hasResult = false;
+        setResultButtonsEnabled(false);
         liveMsg.textContent = 'Result cleared';
       }
 
@@ -869,26 +1202,45 @@
       uploadBtn.addEventListener('click', () => fileInput.click());
       fileInput.addEventListener('change', (e) => {
         if (e.target.files[0]) handleImageUpload(e.target.files[0]);
+        fileInput.value = '';
       });
       copyBtn.addEventListener('click', copyText);
       openBtn.addEventListener('click', openLink);
       shareBtn.addEventListener('click', shareResult);
       historyToggle.addEventListener('click', toggleHistoryPanel);
+      historyCountBtn.addEventListener('click', toggleHistoryPanel);
       clearBtn.addEventListener('click', clearResult);
       genBtn.addEventListener('click', generateQR);
       downloadBtn.addEventListener('click', downloadQR);
       printBtn.addEventListener('click', printQR);
-      
+
       // Generate on Enter key
       genText.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') generateQR();
       });
 
       window.addEventListener('beforeunload', stopCamera);
+      // FIX: stop the camera when the tab/app goes into background to save battery
+      // and avoid a stuck "active" camera indicator.
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden && scanning) {
+          stopCamera();
+          startBtn.innerHTML = '<i class="fa-solid fa-play"></i> <span class="btn-label">Scan</span>';
+          updateUI('Paused (in background)', false);
+        }
+      });
 
       // Initial state
       updateUI('Ready', false);
       scanLaser.style.display = 'none';
+      setResultButtonsEnabled(false);
+      updateHistoryUI();
+
+      if (!hasMediaDevices) {
+        liveMsg.textContent = 'Camera not supported here — you can still upload an image';
+      } else if (!hasJsQR) {
+        liveMsg.textContent = 'Scanner library failed to load — check your connection and reload';
+      }
     })();
   </script>
 </body>
